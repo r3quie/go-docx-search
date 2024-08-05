@@ -29,7 +29,7 @@ func readDocx(src string) (string, error) {
 			buf := new(strings.Builder)
 			_, errd := io.Copy(buf, doc)
 			if errd != nil {
-				return "", errdoc
+				return "", errd
 			}
 			reg, _ := regexp.Compile(`\<.*?\>`)
 			return reg.ReplaceAllString(buf.String(), ""), nil
