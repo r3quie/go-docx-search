@@ -53,7 +53,7 @@ func search(term string, path string) bool {
 	return strings.Contains(text, term)
 }
 
-func docxSearch(terms string, path string) string {
+func docxSearch(terms string, path string, target *widget.Label) {
 	var t []string
 	var paths string
 	files, _ := os.ReadDir(path)
@@ -69,13 +69,16 @@ func docxSearch(terms string, path string) string {
 		}
 		if !slices.Contains(truth, false) {
 			paths += (file.Name() + "\n")
+			target.SetText(paths)
 		}
 	}
 	if paths == "" {
-		return "Not found"
+		//return "Not found"
+		target.SetText("Nenalezeno")
 	}
 	paths = paths[:len(paths)-1]
-	return paths
+	//return paths
+	target.SetText(paths)
 }
 
 func main() {
@@ -95,7 +98,7 @@ func main() {
 	input := widget.NewMultiLineEntry()
 	input.PlaceHolder = "§ 15 odst. 1\n§ 19 odst. 1\n§ 23 odst. 1 písm. c)"
 
-	zvirepath := ""
+	var zvirepath string
 
 	zvirata := widget.NewSelect([]string{"Koně", "Ovce/kozy", "Prasata", "Tuři", "Všechna"}, func(s string) {
 		switch s {
@@ -121,7 +124,8 @@ func main() {
 	}
 
 	search := widget.NewButton("Hledat", func() {
-		vysledek.SetText(docxSearch(input.Text, string(y)+zvirepath))
+		vysledek.SetText("Hledám...")
+		go docxSearch(input.Text, string(y)+zvirepath, vysledek)
 	})
 
 	w.SetContent(container.NewVBox(
