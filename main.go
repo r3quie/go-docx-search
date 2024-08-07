@@ -118,13 +118,12 @@ func main() {
 
 	vysledek := widget.NewLabel("")
 
-	y, err := os.ReadFile("env/env")
-	if err != nil {
-		panic(err)
-	}
-
 	search := widget.NewButton("Hledat", func() {
 		vysledek.SetText("Hledám...")
+		y, err := os.ReadFile("env/env")
+		if err != nil {
+			panic(err)
+		}
 		go docxSearch(input.Text, string(y)+zvirepath, vysledek)
 	})
 
