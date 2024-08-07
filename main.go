@@ -2,12 +2,15 @@ package main
 
 import (
 	"archive/zip"
-	"fmt"
 	"io"
 	"os"
 	"regexp"
 	"slices"
 	"strings"
+
+	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/widget"
 )
 
 // Returns text from a doc or docx file as string
@@ -50,7 +53,7 @@ func search(term string, path string) bool {
 	return strings.Contains(text, term)
 }
 
-func input(terms string, path string) string {
+func docxSearch(terms string, path string) string {
 	var t []string
 	var paths string
 	files, _ := os.ReadDir(path)
@@ -76,9 +79,59 @@ func input(terms string, path string) string {
 }
 
 func main() {
+	/*
+		y, err := os.ReadFile("env/env")
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(input("§ 15 odst. 1\n§ 19 odst. 1", string(y)))
+	*/
+	a := app.New()
+	w := a.NewWindow("Kalkulačka lhůt")
+
+	title := widget.NewLabel("Vyhledávač rozhodnuí")
+	labeldat := widget.NewLabel("Zadejte hledaná ustanovení")
+
+	input := widget.NewMultiLineEntry()
+	input.PlaceHolder = "§ 15 odst. 1\n§ 19 odst. 1\n§ 23 odst. 1 písm. c)"
+
+	zvirepath := ""
+
+	zvirata := widget.NewSelect([]string{"Koně", "Ovce/kozy", "Prasata", "Tuři", "Všechna"}, func(s string) {
+		switch s {
+		case "Koně":
+			zvirepath = "K\\"
+		case "Ovce/kozy":
+			zvirepath = "O\\"
+		case "Prasata":
+			zvirepath = "P\\"
+		case "Tuři":
+			zvirepath = "T\\"
+		case "Všechna":
+			zvirepath = ""
+		}
+	})
+	zvirata.PlaceHolder = "Vyberte druh zvířete"
+
+	vysledek := widget.NewLabel("")
+
 	y, err := os.ReadFile("env/env")
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(input("§ 15 odst. 1\n§ 19 odst. 1", string(y)))
+
+	search := widget.NewButton("Hledat", func() {
+		vysledek.SetText(docxSearch(input.Text, string(y)+zvirepath))
+	})
+
+	w.SetContent(container.NewVBox(
+		title,
+		labeldat,
+		input,
+		zvirata,
+		search,
+		vysledek,
+	))
+
+	w.ShowAndRun()
 }
