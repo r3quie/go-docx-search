@@ -62,11 +62,7 @@ func input(terms string, path string) string {
 	for _, file := range files {
 		var truth []bool
 		for _, term := range t {
-			if search(term, (path + file.Name())) {
-				truth = append(truth, true)
-				continue
-			}
-			truth = append(truth, false)
+			truth = append(truth, search(term, path+file.Name()))
 		}
 		if !slices.Contains(truth, false) {
 			paths += (file.Name() + "\n")
@@ -75,6 +71,7 @@ func input(terms string, path string) string {
 	if paths == "" {
 		return "Not found"
 	}
+	paths = paths[:len(paths)-1]
 	return paths
 }
 
