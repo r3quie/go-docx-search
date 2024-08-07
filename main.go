@@ -2,7 +2,9 @@ package main
 
 import (
 	"archive/zip"
+	"fmt"
 	"io"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -39,14 +41,46 @@ func readDocx(src string) (string, error) {
 	return "", nil
 }
 
-func search(term string, path string) (bool, error) {
+func search(term string, path string) bool {
 	text, err := readDocx(path)
 	if err != nil {
-		return false, err
+		return false
 	}
-	return strings.Contains(text, term), nil
+	return strings.Contains(text, term)
+}
+
+func input(terms string, path string) string {
+	var t []string
+	var paths string
+	files, _ := os.ReadDir(path)
+	if strings.Contains(terms, "\n") {
+		t = strings.Split(terms, "\n")
+	} else {
+		t = []string{terms}
+	}
+	for _, file := range files {
+		var truth []bool
+		for _, term := range t {
+			if search(term, (path + file.Name())) {
+				truth = append(truth, true)
+				continue
+			}
+			truth = append(truth, false)
+		}
+		if truth[0] && truth[1] {
+			paths += (file.Name() + "\n")
+		}
+	}
+	if paths == "" {
+		return "Not found"
+	}
+	return paths
 }
 
 func main() {
-
+	y, err := os.ReadFile("env")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(input("§ 15 odst. 1\n§ 19 odst. 1", string(y)))
 }
