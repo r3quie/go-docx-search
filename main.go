@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -67,7 +68,7 @@ func input(terms string, path string) string {
 			}
 			truth = append(truth, false)
 		}
-		if truth[0] && truth[1] {
+		if !slices.Contains(truth, false) {
 			paths += (file.Name() + "\n")
 		}
 	}
@@ -78,7 +79,7 @@ func input(terms string, path string) string {
 }
 
 func main() {
-	y, err := os.ReadFile("env")
+	y, err := os.ReadFile("env/env")
 	if err != nil {
 		panic(err)
 	}
