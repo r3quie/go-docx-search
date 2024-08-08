@@ -8,8 +8,10 @@ import (
 	"slices"
 	"strings"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -75,6 +77,7 @@ func docxSearch(terms string, path string, target *widget.Label) {
 	if paths == "" {
 		//return "Not found"
 		target.SetText("Nenalezeno")
+		return
 	}
 	paths = paths[:len(paths)-1]
 	//return paths
@@ -91,6 +94,8 @@ func main() {
 	*/
 	a := app.New()
 	w := a.NewWindow("Kalkulačka lhůt")
+	w.Resize(fyne.NewSize(1000, 800))
+	w.CenterOnScreen()
 
 	title := widget.NewLabel("Vyhledávač rozhodnuí")
 	labeldat := widget.NewLabel("Zadejte hledaná ustanovení")
@@ -111,7 +116,7 @@ func main() {
 		case "Tuři":
 			zvirepath = "T\\"
 		case "Všechna":
-			zvirepath = ""
+			return
 		}
 	})
 	zvirata.PlaceHolder = "Vyberte druh zvířete"
@@ -127,13 +132,24 @@ func main() {
 		go docxSearch(input.Text, string(y)+zvirepath, vysledek)
 	})
 
-	w.SetContent(container.NewVBox(
+	main_container := container.New(layout.NewVBoxLayout(),
 		title,
 		labeldat,
 		input,
 		zvirata,
 		search,
-		vysledek,
+	)
+
+	scroll := container.NewScroll(vysledek)
+	scroll.SetMinSize(fyne.Size{Width: 700, Height: 200})
+
+	//vysledek_container := container.New(layout.NewHBoxLayout(), scroll)
+
+	w.SetContent(container.NewHBox(
+		layout.NewSpacer(),
+		main_container,
+		scroll,
+		layout.NewSpacer(),
 	))
 
 	w.ShowAndRun()
