@@ -65,6 +65,10 @@ func docxSearch(terms string, path string, target *widget.Label) {
 		t = []string{terms}
 	}
 	for _, file := range files {
+		if file.IsDir() {
+			subdir, _ := os.ReadDir(path + file.Name())
+			// do something pls
+		}
 		var truth []bool
 		for _, term := range t {
 			truth = append(truth, search(term, path+file.Name()))
