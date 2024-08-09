@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"fmt"
 	"io"
 	"os"
 	"regexp"
@@ -16,6 +17,9 @@ import (
 )
 
 // Returns text from a doc or docx file as string
+
+const FVYSLEDEK string = "%-63s %s\n"
+
 func readDocx(src string) (string, error) {
 	r, err := zip.OpenReader(src)
 	if err != nil {
@@ -89,6 +93,11 @@ func docxSearch(terms string, path string, target *widget.Label) {
 					truth = append(truth, search(term, path+file.Name()+"\\"+subfile.Name()))
 				}
 				if !slices.Contains(truth, false) {
+					if nfo, err := subfile.Info(); err == nil {
+						paths += fmt.Sprintf(FVYSLEDEK, file.Name()+"\\"+subfile.Name(), nfo.ModTime().Format("02.01.2006"))
+						target.SetText(paths)
+						continue
+					}
 					paths += (file.Name() + "\\" + subfile.Name() + "\n")
 					target.SetText(paths)
 				}
@@ -100,6 +109,11 @@ func docxSearch(terms string, path string, target *widget.Label) {
 			truth = append(truth, search(term, path+file.Name()))
 		}
 		if !slices.Contains(truth, false) {
+			if nfo, err := file.Info(); err == nil {
+				paths += fmt.Sprintf(FVYSLEDEK, file.Name(), nfo.ModTime().Format("02.01.2006"))
+				target.SetText(paths)
+				continue
+			}
 			paths += (file.Name() + "\n")
 			target.SetText(paths)
 		}
@@ -152,6 +166,7 @@ func main() {
 	zvirata.PlaceHolder = "Vyberte druh zvířete"
 
 	vysledek := widget.NewLabel("")
+	vysledek.TextStyle = fyne.TextStyle{Monospace: true}
 
 	search := widget.NewButton("Hledat", func() {
 		vysledek.SetText("Hledám...")
