@@ -56,6 +56,22 @@ func search(term string, path string) bool {
 }
 
 func docxSearch(terms string, path string, target *widget.Label) {
+	if terms == "" {
+		target.SetText("Zadejte hledaný výraz")
+		return
+	}
+	if len(terms) < 3 {
+		target.SetText("Hledaný výraz \"" + terms + "\" je příliš krátký")
+		return
+	}
+
+	if strings.Contains(terms, "odst ") {
+		terms = strings.ReplaceAll(terms, "odst ", "odst. ")
+	}
+	if strings.Contains(terms, "písm ") {
+		terms = strings.ReplaceAll(terms, "písm ", "písm. ")
+	}
+
 	var t []string
 	var paths string
 	files, _ := os.ReadDir(path)
@@ -67,7 +83,17 @@ func docxSearch(terms string, path string, target *widget.Label) {
 	for _, file := range files {
 		if file.IsDir() {
 			subdir, _ := os.ReadDir(path + file.Name())
-			// do something pls
+			for _, subfile := range subdir {
+				var truth []bool
+				for _, term := range t {
+					truth = append(truth, search(term, path+file.Name()+"\\"+subfile.Name()))
+				}
+				if !slices.Contains(truth, false) {
+					paths += (file.Name() + "\\" + subfile.Name() + "\n")
+					target.SetText(paths)
+				}
+			}
+			continue
 		}
 		var truth []bool
 		for _, term := range t {
