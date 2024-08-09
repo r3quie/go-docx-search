@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"regexp"
 	"slices"
 	"strings"
@@ -59,7 +60,7 @@ func search(term string, path string) bool {
 	return strings.Contains(text, term)
 }
 
-func docxSearch(terms string, path string, target *widget.Label) {
+func docxSearch(terms string, path string, target *widget.Label, optiontarget *widget.Select) {
 	if terms == "" {
 		target.SetText("Zadejte hledaný výraz")
 		return
@@ -78,6 +79,7 @@ func docxSearch(terms string, path string, target *widget.Label) {
 
 	var t []string
 	var paths string
+	var choice []string
 	files, _ := os.ReadDir(path)
 	if strings.Contains(terms, "\n") {
 		t = strings.Split(terms, "\n")
@@ -96,10 +98,14 @@ func docxSearch(terms string, path string, target *widget.Label) {
 					if nfo, err := subfile.Info(); err == nil {
 						paths += fmt.Sprintf(FVYSLEDEK, file.Name()+"\\"+subfile.Name(), nfo.ModTime().Format("02.01.2006"))
 						target.SetText(paths)
+						choice = append(choice, file.Name()+"\\"+subfile.Name())
+						optiontarget.Options = choice
 						continue
 					}
 					paths += (file.Name() + "\\" + subfile.Name() + "\n")
 					target.SetText(paths)
+					choice = append(choice, file.Name()+"\\"+subfile.Name())
+					optiontarget.Options = choice
 				}
 			}
 			continue
@@ -112,10 +118,14 @@ func docxSearch(terms string, path string, target *widget.Label) {
 			if nfo, err := file.Info(); err == nil {
 				paths += fmt.Sprintf(FVYSLEDEK, file.Name(), nfo.ModTime().Format("02.01.2006"))
 				target.SetText(paths)
+				choice = append(choice, file.Name())
+				optiontarget.Options = choice
 				continue
 			}
 			paths += (file.Name() + "\n")
 			target.SetText(paths)
+			choice = append(choice, file.Name())
+			optiontarget.Options = choice
 		}
 	}
 	if paths == "" {
@@ -123,9 +133,10 @@ func docxSearch(terms string, path string, target *widget.Label) {
 		target.SetText("Nenalezeno")
 		return
 	}
-	paths = paths[:len(paths)-1]
+	paths += "Dokončeno"
 	//return paths
 	target.SetText(paths)
+	optiontarget.Options = choice
 }
 
 func main() {
@@ -168,13 +179,25 @@ func main() {
 	vysledek := widget.NewLabel("")
 	vysledek.TextStyle = fyne.TextStyle{Monospace: true}
 
+	open := widget.NewSelect([]string{}, func(s string) {
+		y, err := os.ReadFile("env/env")
+		if err != nil {
+			panic(err)
+		}
+		if zvirepath == "" {
+			zvirepath = "\\"
+		}
+		exec.Command(`explorer`, `/select,`, string(y)+zvirepath+s).Run()
+	})
+	open.PlaceHolder = "Vyberte příkaz k otevření"
+
 	search := widget.NewButton("Hledat", func() {
 		vysledek.SetText("Hledám...")
 		y, err := os.ReadFile("env/env")
 		if err != nil {
 			panic(err)
 		}
-		go docxSearch(input.Text, string(y)+zvirepath, vysledek)
+		go docxSearch(input.Text, string(y)+zvirepath, vysledek, open)
 	})
 
 	main_container := container.New(layout.NewVBoxLayout(),
@@ -183,6 +206,7 @@ func main() {
 		input,
 		zvirata,
 		search,
+		open,
 	)
 
 	scroll := container.NewScroll(vysledek)
