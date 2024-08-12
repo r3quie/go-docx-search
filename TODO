@@ -4,3 +4,4 @@
 - [ ] convert result text var to array to save memory?
 - [ ] sort by date
 - [ ] add IC or RC filter
+- [ ] create a function for *for _, file := dir* loop, with recursion
