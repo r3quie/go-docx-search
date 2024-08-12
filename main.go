@@ -9,7 +9,9 @@ import (
 	"os/exec"
 	"regexp"
 	"slices"
+	"sort"
 	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -18,8 +20,18 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// Returns text from a doc or docx file as string
+type Found struct {
+	path     string
+	subdir   string
+	filename string
+	modtime  time.Time
+}
 
+func (f Found) String() string {
+	return fmt.Sprintf("%-63s %s", f.subdir+f.filename, f.modtime.Format("02.01.2006"))
+}
+
+// Returns text from a doc or docx file as string
 func readDocx(src string) (string, error) {
 	r, err := zip.OpenReader(src)
 	if err != nil {
@@ -77,8 +89,8 @@ func docxSearch(terms string, path string, target *widget.Label, optiontarget *w
 	}
 
 	var t []string
+	var results []Found
 	var paths string
-	var choice []string
 
 	files, _ := os.ReadDir(path)
 	if strings.Contains(terms, "\n") {
@@ -87,23 +99,32 @@ func docxSearch(terms string, path string, target *widget.Label, optiontarget *w
 		t = []string{terms}
 	}
 
+	// generative function, should be used inside a loop, will change to return a [][string, time.Time] in the future
 	walk := func(doc fs.DirEntry, subdr string) {
 		var truth []bool
 		for _, term := range t {
 			truth = append(truth, search(term, path+subdr+doc.Name()))
 		}
+
 		if !slices.Contains(truth, false) {
 			if nfo, err := doc.Info(); err == nil {
-				paths += fmt.Sprintf("%-63s %s\n", subdr+doc.Name(), nfo.ModTime().Format("02.01.2006"))
+				found := Found{path, subdr, doc.Name(), nfo.ModTime()}
+				results = append(results, found)
+				sort.Slice(results, func(i, j int) bool {
+					return results[i].modtime.Before(results[j].modtime)
+				})
+				var prepaths string
+				for _, x := range results {
+					prepaths += x.String() + "\n"
+				}
+				paths = prepaths
 				target.SetText(paths)
-				choice = append(choice, doc.Name())
-				optiontarget.Options = choice
+				optiontarget.Options = append(optiontarget.Options, found.subdir+found.filename)
 				return
 			}
 			paths += (subdr + doc.Name() + "\n")
 			target.SetText(paths)
-			choice = append(choice, subdr+doc.Name())
-			optiontarget.Options = choice
+			optiontarget.Options = append(optiontarget.Options, subdr+doc.Name())
 		}
 	}
 
@@ -125,7 +146,6 @@ func docxSearch(terms string, path string, target *widget.Label, optiontarget *w
 	paths += "Dokončeno"
 	//return paths
 	target.SetText(paths)
-	optiontarget.Options = choice
 }
 
 func main() {
