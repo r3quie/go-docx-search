@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"os"
 	"os/exec"
 	"regexp"
@@ -91,10 +92,11 @@ func search(term string, path string) bool {
 func walker(files []fs.DirEntry, walk func(fs.DirEntry, string), path string, subdr string) {
 	for _, file := range files {
 		if file.IsDir() {
-			subdir, _ := os.ReadDir(path + file.Name())
+			subdir, _ := os.ReadDir(path + subdr + file.Name())
 			walker(subdir, walk, path, subdr+file.Name()+"\\")
 			continue
 		}
+		log.Println(file, subdr)
 		walk(file, subdr)
 	}
 }
