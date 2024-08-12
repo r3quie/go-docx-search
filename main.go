@@ -21,14 +21,32 @@ import (
 )
 
 type Found struct {
-	path     string
 	subdir   string
 	filename string
 	modtime  time.Time
 }
 
+type FoundSlice []Found
+
+// Returns a string representation of a Found struct (struct{subdir, filename, modtime})
 func (f Found) String() string {
 	return fmt.Sprintf("%-63s %s", f.subdir+f.filename, f.modtime.Format("02.01.2006"))
+}
+
+// Sorts the slice of Found structs ([]struct{subdir, filename, modtime}) by modtime
+func (f FoundSlice) Sort() {
+	sort.Slice(f, func(i, j int) bool {
+		return f[i].modtime.Before(f[j].modtime)
+	})
+}
+
+// Returns a string representation of FoundSlice ([]struct{subdir, filename, modtime})
+func (f FoundSlice) WidgetText() string {
+	var text string
+	for _, x := range f {
+		text += x.String() + "\n"
+	}
+	return text
 }
 
 // Returns text from a doc or docx file as string
@@ -89,45 +107,51 @@ func docxSearch(terms string, path string, target *widget.Label, optiontarget *w
 	}
 
 	var t []string
-	var results []Found
-	var paths string
+	var results FoundSlice // FoundSlice is a slice of Found structs, Found is a struct with path, subdir, filename and modtime
 
 	files, _ := os.ReadDir(path)
+
+	// check if there are multiple terms, split them into a slice; if not, put the term into a single-element slice
 	if strings.Contains(terms, "\n") {
 		t = strings.Split(terms, "\n")
 	} else {
 		t = []string{terms}
 	}
 
-	// generative function, should be used inside a loop, will change to return a [][string, time.Time] in the future
+	// generative function, should be used inside a loop
+	// should return FoundSlice([]struct{subdir, filename, modtime}), right now directly modifies the target widget(s)
 	walk := func(doc fs.DirEntry, subdr string) {
+
+		// search for each term in the document
 		var truth []bool
 		for _, term := range t {
 			truth = append(truth, search(term, path+subdr+doc.Name()))
 		}
 
+		// if all terms are found in the document, add it to the results
 		if !slices.Contains(truth, false) {
+			// if modime found, add it to the results
 			if nfo, err := doc.Info(); err == nil {
-				found := Found{path, subdr, doc.Name(), nfo.ModTime()}
+				found := Found{subdr, doc.Name(), nfo.ModTime()}
 				results = append(results, found)
-				sort.Slice(results, func(i, j int) bool {
-					return results[i].modtime.Before(results[j].modtime)
-				})
-				var prepaths string
-				for _, x := range results {
-					prepaths += x.String() + "\n"
-				}
-				paths = prepaths
-				target.SetText(paths)
+
+				// Sort by modtime
+				results.Sort()
+
+				// Add results to the target widget and options to the open widget
+				// unsure whether prepaths is needed, will rewrite in the future
+				target.SetText(results.WidgetText())
 				optiontarget.Options = append(optiontarget.Options, found.subdir+found.filename)
 				return
 			}
-			paths += (subdr + doc.Name() + "\n")
-			target.SetText(paths)
+			// same thing if modtime not found
+			results = append(results, Found{subdir: subdr, filename: doc.Name()})
+			target.SetText(results.WidgetText())
 			optiontarget.Options = append(optiontarget.Options, subdr+doc.Name())
 		}
 	}
 
+	// walk through the files and first level subdirectories
 	for _, file := range files {
 		if file.IsDir() {
 			subdir, _ := os.ReadDir(path + file.Name())
@@ -138,14 +162,17 @@ func docxSearch(terms string, path string, target *widget.Label, optiontarget *w
 		}
 		walk(file, "")
 	}
-	if paths == "" {
+
+	// if no results are found, return "Not found"
+	if len(results) == 0 {
 		//return "Not found"
 		target.SetText("Nenalezeno")
 		return
 	}
-	paths += "Dokončeno"
+
+	// if all terms are found in all documents, return "Done" (add to end of widget)
 	//return paths
-	target.SetText(paths)
+	target.SetText(target.Text + "Dokončeno")
 }
 
 func main() {
@@ -192,17 +219,13 @@ func main() {
 	vysledek.TextStyle = fyne.TextStyle{Monospace: true}
 
 	open := widget.NewSelect([]string{}, func(s string) {
+		// open env to get path
 		y, err := os.ReadFile("env/env")
 		if err != nil {
 			panic(err)
 		}
-		if zvirepath == "" {
-			zvirepath = "\\"
-		}
-		if zvirepath == "" {
-			exec.Command(`explorer`, `/select,`, string(y)+s).Run()
-			return
-		}
+
+		// open file in explorer
 		exec.Command(`explorer`, `/select,`, string(y)+zvirepath+s).Run()
 	})
 	open.PlaceHolder = "Vyberte příkaz k otevření"
