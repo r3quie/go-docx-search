@@ -88,6 +88,16 @@ func search(term string, path string) bool {
 	}
 	return strings.Contains(text, term)
 }
+func walker(files []fs.DirEntry, walk func(fs.DirEntry, string), path string, subdr string) {
+	for _, file := range files {
+		if file.IsDir() {
+			subdir, _ := os.ReadDir(path + file.Name())
+			walker(subdir, walk, path, subdr+file.Name()+"\\")
+			continue
+		}
+		walk(file, subdr)
+	}
+}
 
 func docxSearch(terms string, path string, target *widget.Label, optiontarget *widget.Select) {
 	if terms == "" {
@@ -151,16 +161,7 @@ func docxSearch(terms string, path string, target *widget.Label, optiontarget *w
 	}
 
 	// walk through the files and first level subdirectories
-	for _, file := range files {
-		if file.IsDir() {
-			subdir, _ := os.ReadDir(path + file.Name())
-			for _, subfile := range subdir {
-				walk(subfile, file.Name()+"\\")
-			}
-			continue
-		}
-		walk(file, "")
-	}
+	walker(files, walk, path, "")
 
 	// if no results are found, return "Not found"
 	if len(results) == 0 {
