@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"regexp"
@@ -18,8 +19,6 @@ import (
 )
 
 // Returns text from a doc or docx file as string
-
-const FVYSLEDEK string = "%-63s %s\n"
 
 func readDocx(src string) (string, error) {
 	r, err := zip.OpenReader(src)
@@ -80,53 +79,43 @@ func docxSearch(terms string, path string, target *widget.Label, optiontarget *w
 	var t []string
 	var paths string
 	var choice []string
+
 	files, _ := os.ReadDir(path)
 	if strings.Contains(terms, "\n") {
 		t = strings.Split(terms, "\n")
 	} else {
 		t = []string{terms}
 	}
+
+	walk := func(doc fs.DirEntry, subdr string) {
+		var truth []bool
+		for _, term := range t {
+			truth = append(truth, search(term, path+subdr+doc.Name()))
+		}
+		if !slices.Contains(truth, false) {
+			if nfo, err := doc.Info(); err == nil {
+				paths += fmt.Sprintf("%-63s %s\n", subdr+doc.Name(), nfo.ModTime().Format("02.01.2006"))
+				target.SetText(paths)
+				choice = append(choice, doc.Name())
+				optiontarget.Options = choice
+				return
+			}
+			paths += (subdr + doc.Name() + "\n")
+			target.SetText(paths)
+			choice = append(choice, subdr+doc.Name())
+			optiontarget.Options = choice
+		}
+	}
+
 	for _, file := range files {
 		if file.IsDir() {
 			subdir, _ := os.ReadDir(path + file.Name())
 			for _, subfile := range subdir {
-				var truth []bool
-				for _, term := range t {
-					truth = append(truth, search(term, path+file.Name()+"\\"+subfile.Name()))
-				}
-				if !slices.Contains(truth, false) {
-					if nfo, err := subfile.Info(); err == nil {
-						paths += fmt.Sprintf(FVYSLEDEK, file.Name()+"\\"+subfile.Name(), nfo.ModTime().Format("02.01.2006"))
-						target.SetText(paths)
-						choice = append(choice, file.Name()+"\\"+subfile.Name())
-						optiontarget.Options = choice
-						continue
-					}
-					paths += (file.Name() + "\\" + subfile.Name() + "\n")
-					target.SetText(paths)
-					choice = append(choice, file.Name()+"\\"+subfile.Name())
-					optiontarget.Options = choice
-				}
+				walk(subfile, file.Name()+"\\")
 			}
 			continue
 		}
-		var truth []bool
-		for _, term := range t {
-			truth = append(truth, search(term, path+file.Name()))
-		}
-		if !slices.Contains(truth, false) {
-			if nfo, err := file.Info(); err == nil {
-				paths += fmt.Sprintf(FVYSLEDEK, file.Name(), nfo.ModTime().Format("02.01.2006"))
-				target.SetText(paths)
-				choice = append(choice, file.Name())
-				optiontarget.Options = choice
-				continue
-			}
-			paths += (file.Name() + "\n")
-			target.SetText(paths)
-			choice = append(choice, file.Name())
-			optiontarget.Options = choice
-		}
+		walk(file, "")
 	}
 	if paths == "" {
 		//return "Not found"
@@ -171,7 +160,10 @@ func main() {
 		case "Tuři":
 			zvirepath = "T\\"
 		case "Všechna":
-			return
+			if zvirepath == "" {
+				return
+			}
+			zvirepath = ""
 		}
 	})
 	zvirata.PlaceHolder = "Vyberte druh zvířete"
@@ -186,6 +178,10 @@ func main() {
 		}
 		if zvirepath == "" {
 			zvirepath = "\\"
+		}
+		if zvirepath == "" {
+			exec.Command(`explorer`, `/select,`, string(y)+s).Run()
+			return
 		}
 		exec.Command(`explorer`, `/select,`, string(y)+zvirepath+s).Run()
 	})
