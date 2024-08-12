@@ -1,0 +1,5 @@
+# TODO List
+
+- [ ] Create a dictionary-like array or create slices of two elemnt array meaning [][string, time.Time]
+- [ ] convert result text var to array to save memory?
+- [ ] sort by date
