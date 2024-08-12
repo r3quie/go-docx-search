@@ -132,8 +132,7 @@ func docxSearch(terms string, path string, target *widget.Label, optiontarget *w
 		if !slices.Contains(truth, false) {
 			// if modime found, add it to the results
 			if nfo, err := doc.Info(); err == nil {
-				found := Found{subdr, doc.Name(), nfo.ModTime()}
-				results = append(results, found)
+				results = append(results, Found{subdr, doc.Name(), nfo.ModTime()})
 
 				// Sort by modtime
 				results.Sort()
@@ -141,7 +140,7 @@ func docxSearch(terms string, path string, target *widget.Label, optiontarget *w
 				// Add results to the target widget and options to the open widget
 				// unsure whether prepaths is needed, will rewrite in the future
 				target.SetText(results.WidgetText())
-				optiontarget.Options = append(optiontarget.Options, found.subdir+found.filename)
+				optiontarget.Options = append(optiontarget.Options, subdr+doc.Name())
 				return
 			}
 			// same thing if modtime not found
