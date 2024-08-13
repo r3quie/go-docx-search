@@ -41,7 +41,7 @@ func (f Found) String() string {
 // Sorts the slice of Found structs ([]struct{subdir, filename, modtime}) by modtime
 func (f FoundSlice) Sort() {
 	sort.Slice(f, func(i, j int) bool {
-		return f[i].modtime.Before(f[j].modtime)
+		return f[i].modtime.After(f[j].modtime)
 	})
 }
 
