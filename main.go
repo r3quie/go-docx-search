@@ -201,7 +201,7 @@ func main() {
 		fmt.Println(input("§ 15 odst. 1\n§ 19 odst. 1", string(y)))
 	*/
 	a := app.New()
-	w := a.NewWindow("Kalkulačka lhůt")
+	w := a.NewWindow("Vyhledávač rozhodnuí")
 	w.Resize(fyne.NewSize(1000, 800))
 	w.CenterOnScreen()
 
