@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"log"
 	"os"
 	"os/exec"
 	"regexp"
@@ -20,6 +19,11 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 )
+
+type IcRc struct {
+	search bool
+	rc     bool
+}
 
 type Found struct {
 	subdir   string
@@ -48,6 +52,14 @@ func (f FoundSlice) WidgetText() string {
 		text += x.String() + "\n"
 	}
 	return text
+}
+
+func (f FoundSlice) Options() []string {
+	s := []string{}
+	for _, x := range f {
+		s = append(s, x.subdir+x.filename)
+	}
+	return s
 }
 
 // Returns text from a doc or docx file as string
@@ -82,10 +94,13 @@ func readDocx(src string) (string, error) {
 	return "", nil
 }
 
-func search(term string, path string) bool {
+func search(term string, path string, rcOrIc IcRc) bool {
 	text, err := readDocx(path)
 	if err != nil {
 		return false
+	}
+	if rcOrIc.search {
+		return strings.Contains(text, term) && (!rcOrIc.rc && strings.Count(text, "IČ") > strings.Count(text, "RČ") || rcOrIc.rc && strings.Count(text, "RČ") > strings.Count(text, "IČ"))
 	}
 	return strings.Contains(text, term)
 }
@@ -96,12 +111,12 @@ func walker(files []fs.DirEntry, walk func(fs.DirEntry, string), path string, su
 			walker(subdir, walk, path, subdr+file.Name()+"\\")
 			continue
 		}
-		log.Println(file, subdr)
 		walk(file, subdr)
 	}
 }
 
-func docxSearch(terms string, path string, target *widget.Label, optiontarget *widget.Select) {
+func docxSearch(terms string, path string, target *widget.Label, optiontarget *widget.Select, rcOrIc IcRc) {
+	optiontarget.Options = []string{}
 	if terms == "" {
 		target.SetText("Zadejte hledaný výraz")
 		return
@@ -137,7 +152,7 @@ func docxSearch(terms string, path string, target *widget.Label, optiontarget *w
 		// search for each term in the document
 		var truth []bool
 		for _, term := range t {
-			truth = append(truth, search(term, path+subdr+doc.Name()))
+			truth = append(truth, search(term, path+subdr+doc.Name(), rcOrIc))
 		}
 
 		// if all terms are found in the document, add it to the results
@@ -152,7 +167,7 @@ func docxSearch(terms string, path string, target *widget.Label, optiontarget *w
 				// Add results to the target widget and options to the open widget
 				// unsure whether prepaths is needed, will rewrite in the future
 				target.SetText(results.WidgetText())
-				optiontarget.Options = append(optiontarget.Options, subdr+doc.Name())
+				optiontarget.Options = results.Options()
 				return
 			}
 			// same thing if modtime not found
@@ -215,6 +230,23 @@ func main() {
 			zvirepath = ""
 		}
 	})
+
+	var rc IcRc
+	rcOrIc := widget.NewSelect([]string{"RČ", "IČ", "Obě"}, func(s string) {
+		switch s {
+		case "RČ":
+			rc.search = true
+			rc.rc = true
+		case "IČ":
+			rc.search = true
+			rc.rc = false
+		default:
+			rc.search = false
+		}
+	})
+
+	rcOrIc.PlaceHolder = "RČ/IČ"
+
 	zvirata.PlaceHolder = "Vyberte druh zvířete"
 
 	vysledek := widget.NewLabel("")
@@ -238,14 +270,16 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		go docxSearch(input.Text, string(y)+zvirepath, vysledek, open)
+		go docxSearch(input.Text, string(y)+zvirepath, vysledek, open, rc)
 	})
+
+	choices := container.New(layout.NewHBoxLayout(), zvirata, rcOrIc)
 
 	main_container := container.New(layout.NewVBoxLayout(),
 		title,
 		labeldat,
 		input,
-		zvirata,
+		choices,
 		search,
 		open,
 	)
