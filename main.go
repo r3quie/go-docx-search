@@ -94,16 +94,20 @@ func readDocx(src string) (string, error) {
 	return "", nil
 }
 
+// Searches for a term in a docx file, checks for RČ/IČ and returns true if criteria is met
 func search(term string, path string, rcOrIc IcRc) bool {
 	text, err := readDocx(path)
 	if err != nil {
 		return false
 	}
 	if rcOrIc.search {
+		// returns bool: A && (!B!C || BC); may also be written as A!B!C || ABC
 		return strings.Contains(text, term) && (!rcOrIc.rc && strings.Count(text, "IČ") > strings.Count(text, "RČ") || rcOrIc.rc && strings.Count(text, "RČ") > strings.Count(text, "IČ"))
 	}
 	return strings.Contains(text, term)
 }
+
+// Recursive function to walk through directories and files
 func walker(files []fs.DirEntry, walk func(fs.DirEntry, string), path string, subdr string) {
 	for _, file := range files {
 		if file.IsDir() {
@@ -115,7 +119,9 @@ func walker(files []fs.DirEntry, walk func(fs.DirEntry, string), path string, su
 	}
 }
 
-func docxSearch(terms string, path string, target *widget.Label, optiontarget *widget.Select, rcOrIc IcRc) {
+// Searches for terms in docx files in a directory.
+// Sets the results to a widget, vars target and optiontargets may be omitted if not needed, returns will be needed if done so, see comments in the function
+func docxSearch(terms string, path string, target *widget.Label, optiontarget *widget.Select, rcOrIc IcRc) /*FoundSlice*/ {
 	optiontarget.Options = []string{}
 	if terms == "" {
 		target.SetText("Zadejte hledaný výraz")
@@ -145,8 +151,8 @@ func docxSearch(terms string, path string, target *widget.Label, optiontarget *w
 		t = []string{terms}
 	}
 
-	// generative function, should be used inside a loop
-	// should return FoundSlice([]struct{subdir, filename, modtime}), right now directly modifies the target widget(s)
+	// Generative function, should be used inside a loop.
+	// Should return Found(struct{subdir, filename, modtime}), right now directly modifies the target widget(s)
 	walk := func(doc fs.DirEntry, subdr string) {
 
 		// search for each term in the document
@@ -188,8 +194,8 @@ func docxSearch(terms string, path string, target *widget.Label, optiontarget *w
 	}
 
 	// if all terms are found in all documents, return "Done" (add to end of widget)
-	//return paths
 	target.SetText(target.Text + "Dokončeno")
+	//return results
 }
 
 func main() {
@@ -286,8 +292,6 @@ func main() {
 
 	scroll := container.NewScroll(vysledek)
 	scroll.SetMinSize(fyne.Size{Width: 700, Height: 200})
-
-	//vysledek_container := container.New(layout.NewHBoxLayout(), scroll)
 
 	w.SetContent(container.NewHBox(
 		layout.NewSpacer(),
