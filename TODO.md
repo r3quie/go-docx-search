@@ -6,3 +6,4 @@
 - [x] add IC or RC filter
 - [x] create a function for *for _, file := dir* loop, **with recursion**
 - [x] exec.Command() for subdirs
+- [ ] wait for user input to continue with approximate results (func walkapprox)
