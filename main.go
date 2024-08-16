@@ -95,9 +95,8 @@ func readDocx(src string) (string, error) {
 }
 
 // Searches for a term in a docx file, checks for RČ/IČ and returns true if criteria is met
-func search(term string, path string, rcOrIc IcRc) bool {
-	text, err := readDocx(path)
-	if err != nil {
+func search(term string, text string, rcOrIc IcRc) bool {
+	if text == "" {
 		return false
 	}
 	if rcOrIc.search {
@@ -155,10 +154,15 @@ func docxSearch(terms string, path string, target *widget.Label, optiontarget *w
 	// Should return Found(struct{subdir, filename, modtime}), right now directly modifies the target widget(s)
 	walk := func(doc fs.DirEntry, subdr string) {
 
+		// open the docx file
+		text, err := readDocx(path + subdr + doc.Name())
+		if err != nil {
+			text = ""
+		}
 		// search for each term in the document
 		var truth []bool
 		for _, term := range t {
-			truth = append(truth, search(term, path+subdr+doc.Name(), rcOrIc))
+			truth = append(truth, search(term, text, rcOrIc))
 		}
 
 		// if all terms are found in the document, add it to the results
