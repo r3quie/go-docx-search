@@ -49,17 +49,17 @@ func (f FoundSlice) Sort() {
 
 // Returns a string representation of FoundSlice ([]struct{subdir, filename, modtime})
 func (f FoundSlice) WidgetText() string {
-	var text string
+	var text strings.Builder
 	for _, x := range f {
-		text += x.String() + "\n"
+		text.WriteString(x.String() + "\n")
 	}
-	return text
+	return text.String()
 }
 
 func (f FoundSlice) Options() []string {
-	s := []string{}
-	for _, x := range f {
-		s = append(s, x.subdir+x.filename)
+	s := make([]string, len(f))
+	for i, x := range f {
+		s[i] = x.subdir + x.filename
 	}
 	return s
 }
@@ -142,7 +142,9 @@ func docxSearch(terms string, path string, target binding.String, optiontarget *
 		target.Set("Hledaný výraz \"" + terms + "\" je příliš krátký")
 		return
 	}
-
+	if strings.Contains(terms, "\r") {
+		terms = strings.ReplaceAll(terms, "\r", "")
+	}
 	if strings.Contains(terms, "odst ") {
 		terms = strings.ReplaceAll(terms, "odst ", "odst. ")
 	}
@@ -157,18 +159,15 @@ func docxSearch(terms string, path string, target binding.String, optiontarget *
 
 	files, _ := os.ReadDir(path)
 	// check if there are multiple terms, split them into a slice; if not, put the term into a single-element slice
-	if strings.Contains(terms, "\r\n") {
-		t = strings.Split(terms, "\r\n")
+	if strings.Contains(terms, "\n") {
+		t = strings.Split(terms, "\n")
 	} else {
 		t = []string{terms}
 	}
-	for _, x := range t {
-		fmt.Printf("element in list t is: \"%v\"\n", x)
-	}
 
 	/*
-		for i, x := range t {
-			fmt.Printf("%d. element in list t is: \"%v\"\n", i, x)
+		for _, x := range t {
+			fmt.Printf("element in list t is: \"%v\"\n", x)
 		}
 	*/
 
@@ -197,7 +196,6 @@ func docxSearch(terms string, path string, target binding.String, optiontarget *
 				results.Sort()
 
 				// Add results to the target widget and options to the open widget
-				// unsure whether prepaths is needed, will rewrite in the future
 				target.Set(results.WidgetText())
 				optiontarget.Options = results.Options()
 				return
@@ -231,7 +229,7 @@ func docxSearch(terms string, path string, target binding.String, optiontarget *
 				truth = append(truth, search(term, text, rcOrIc))
 			}
 
-			// if all terms are found in the document, add it to the results
+			// if same number of terms were found in the document, add it to the results
 			if results[0].truthvalue == truthCount(truth) {
 				// if modime found, add it to the results
 				if nfo, err := doc.Info(); err == nil {
@@ -348,7 +346,6 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println(input.Text)
 		go docxSearch(input.Text, string(y)+zvirepath, vysledekstr, open, rc)
 	})
 
