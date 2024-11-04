@@ -37,6 +37,9 @@ type FoundSlice []Found
 
 // Returns a string representation of a Found struct (struct{subdir, filename, modtime})
 func (f Found) String() string {
+	if len(f.subdir+f.filename) > 63 {
+		return fmt.Sprintf("%-63s %s", f.subdir+f.filename[:58]+"...", f.modtime.Format("02.01.2006"))
+	}
 	return fmt.Sprintf("%-63s %s", f.subdir+f.filename, f.modtime.Format("02.01.2006"))
 }
 
