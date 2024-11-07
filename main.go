@@ -1,17 +1,12 @@
 package main
 
 import (
-	"archive/zip"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"os/exec"
-	"regexp"
 	"slices"
-	"sort"
 	"strings"
-	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -20,96 +15,6 @@ import (
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 )
-
-type IcRc struct {
-	search bool
-	rc     bool
-}
-
-type Found struct {
-	subdir     string
-	filename   string
-	modtime    time.Time
-	truthvalue int
-}
-
-type FoundSlice []Found
-
-// Returns a string representation of a Found struct (struct{subdir, filename, modtime})
-func (f Found) String() string {
-	if len(f.subdir+f.filename) > 63 {
-		return fmt.Sprintf("%-63s %s", f.subdir+f.filename[:58]+"...", f.modtime.Format("02.01.2006"))
-	}
-	return fmt.Sprintf("%-63s %s", f.subdir+f.filename, f.modtime.Format("02.01.2006"))
-}
-
-// Sorts the slice of Found structs ([]struct{subdir, filename, modtime}) by modtime
-func (f FoundSlice) Sort() {
-	sort.Slice(f, func(i, j int) bool {
-		return f[i].modtime.After(f[j].modtime)
-	})
-}
-
-// Returns a string representation of FoundSlice ([]struct{subdir, filename, modtime})
-func (f FoundSlice) WidgetText() string {
-	var text strings.Builder
-	for _, x := range f {
-		text.WriteString(x.String() + "\n")
-	}
-	return text.String()
-}
-
-func (f FoundSlice) Options() []string {
-	s := make([]string, len(f))
-	for i, x := range f {
-		s[i] = x.subdir + x.filename
-	}
-	return s
-}
-
-// Returns text from a doc or docx file as string
-func readDocx(src string) (string, error) {
-	r, err := zip.OpenReader(src)
-	if err != nil {
-		return "", err
-	}
-	defer func() {
-		if err := r.Close(); err != nil {
-			panic(err)
-		}
-	}()
-
-	for _, f := range r.File {
-		if f.Name == "word/document.xml" {
-			// fmt.Println("found")
-			doc, errdoc := f.Open()
-			if errdoc != nil {
-				return "", errdoc
-			}
-			buf := new(strings.Builder)
-			_, errd := io.Copy(buf, doc)
-			if errd != nil {
-				return "", errd
-			}
-			reg, _ := regexp.Compile(`\<.*?\>`)
-			return reg.ReplaceAllString(buf.String(), ""), nil
-
-		}
-	}
-	return "", nil
-}
-
-// Searches for a term in a docx file, checks for RČ/IČ and returns true if criteria is met
-func search(term string, text string, rcOrIc IcRc) bool {
-	if text == "" {
-		return false
-	}
-	if rcOrIc.search {
-		// returns bool: A && (!B!C || BC); may also be written as A!B!C || ABC
-		return strings.Contains(text, term) && (!rcOrIc.rc && strings.Count(text, "IČ") > strings.Count(text, "RČ") || rcOrIc.rc && strings.Count(text, "RČ") > strings.Count(text, "IČ"))
-	}
-	return strings.Contains(text, term)
-}
 
 // Recursive function to walk through directories and files
 func walker(files []fs.DirEntry, walk func(fs.DirEntry, string), path string, subdr string) {
@@ -121,16 +26,6 @@ func walker(files []fs.DirEntry, walk func(fs.DirEntry, string), path string, su
 		}
 		walk(file, subdr)
 	}
-}
-
-func truthCount(truth []bool) int {
-	count := 0
-	for _, x := range truth {
-		if x {
-			count++
-		}
-	}
-	return count
 }
 
 // Searches for terms in docx files in a directory.
@@ -216,7 +111,7 @@ func docxSearch(terms string, path string, target binding.String, optiontarget *
 	// if no results are found, return "Not found"
 	if len(results) == 0 {
 		//return "Not found"
-		target.Set("Nenalezeno, vyhledávám nejblžší výsledky")
+		target.Set("Nenalezeno, vyhledávám nejblžší výsledky") // POPUP HERE
 		results = FoundSlice{Found{truthvalue: 1}}
 		// if no results are found, search for the closest results
 		walkapprox := func(doc fs.DirEntry, subdr string) {
@@ -242,7 +137,6 @@ func docxSearch(terms string, path string, target binding.String, optiontarget *
 					results.Sort()
 
 					// Add results to the target widget and options to the open widget
-					// unsure whether prepaths is needed, will rewrite in the future
 					target.Set(results.WidgetText())
 					optiontarget.Options = results.Options()
 					return
@@ -265,7 +159,9 @@ func docxSearch(terms string, path string, target binding.String, optiontarget *
 		}
 		walker(files, walkapprox, path, "")
 		y, _ := target.Get()
-		target.Set(y + fmt.Sprintf("Nejbližší shody v %d ", results[0].truthvalue))
+		target.Set(
+			"Nepodařilo se najít žádný dokument obsahující všechny hledané výrazy.\n" + y + fmt.Sprintf("Nejbližší shody v %d dokumentech", results[0].truthvalue),
+		)
 	}
 
 	// if all terms are found in all documents, return "Done" (add to end of widget)
@@ -280,7 +176,7 @@ func main() {
 	w.Resize(fyne.NewSize(1000, 800))
 	w.CenterOnScreen()
 
-	title := widget.NewLabel("Vyhledávač rozhodnuí")
+	title := widget.NewLabel("Vyhledávač rozhodnutí")
 	labeldat := widget.NewLabel("Zadejte hledaná ustanovení")
 
 	input := widget.NewMultiLineEntry()
