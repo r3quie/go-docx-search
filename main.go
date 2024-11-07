@@ -276,7 +276,7 @@ func docxSearch(terms string, path string, target binding.String, optiontarget *
 
 func main() {
 	a := app.New()
-	w := a.NewWindow("Vyhledávač rozhodnuí")
+	w := a.NewWindow("Vyhledávač rozhodnutí")
 	w.Resize(fyne.NewSize(1000, 800))
 	w.CenterOnScreen()
 
