@@ -2,19 +2,19 @@ package v2
 
 import (
 	"encoding/json"
-	"fmt"
+	"strings"
 
-	"github.com/r3quie/provision-crawler"
+	crawler "github.com/r3quie/provision-crawler"
 )
 
 /* TODO:	LINT
-		METHOD TO CRAWLER
-		MOVE CRAWLER TO V2
+METHOD TO CRAWLER
+MOVE CRAWLER TO V2
 */
 
 type DuoBool struct {
 	search bool
-	term     bool
+	term   bool
 }
 
 func isSubset(main, sub []string) bool {
@@ -51,7 +51,7 @@ func findInJson(f []byte, terms []string, animal string, podnikatel DuoBool, gen
 		if !strings.HasSuffix(x.Path, animal) {
 			continue
 		}
-		
+
 		found = append(found, x)
 	}
 	return found, nil

@@ -3,6 +3,7 @@ package v2
 import (
 	"os"
 	"os/exec"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -44,18 +45,18 @@ func main() {
 		}
 	})
 
-	var rc IcRc
+	var rc DuoBool
 	rcOrIc := widget.NewSelect([]string{"RČ", "IČ", "Obě"}, func(s string) {
 		switch s {
 		case "RČ":
 			rc.search = true
-			rc.rc = true
+			rc.term = true
 		case "IČ":
 			rc.search = true
-			rc.rc = false
+			rc.term = false
 		case "Obě":
 			rc.search = false
-			rc.rc = false
+			rc.term = false
 		}
 	})
 
@@ -83,11 +84,20 @@ func main() {
 
 	search := widget.NewButton("Hledat", func() {
 		vysledek.SetText("Hledám...")
-		y, err := os.ReadFile("env/env")
+		/*
+			y, err := os.ReadFile("env/env")
+			if err != nil {
+				panic(err)
+			}*/
+		db, err := os.ReadFile("db/db.json")
 		if err != nil {
 			panic(err)
 		}
-		go docxSearch(input.Text, string(y)+zvirepath, vysledekstr, open, rc)
+		res, err := findInJson(db, strings.Split(input.Text, "\n"), zvirepath, rc, DuoBool{}, DuoBool{})
+		if err != nil {
+			panic(err)
+		}
+		vysledekstr.Set(res.WidgetText())
 	})
 
 	choices := container.New(layout.NewHBoxLayout(), zvirata, rcOrIc)
